@@ -38,7 +38,7 @@
         window.confirmLogout = () => {
             signOut(auth).then(() => { 
                 // 1. Stop Music
-                if(window.stopMusicPlayer) window.stopMusicPlayer(); 
+                if(window.pauseComfortMusic) window.pauseComfortMusic(); // Updated music call
                 
                 // 2. Clear Chat History
                 const chatContainer = document.getElementById('chat-messages');
@@ -94,12 +94,6 @@
 
                 // Load Data
                 if(window.loadUserSchedule) window.loadUserSchedule();
-
-                // Auto-load Music
-                const grid = document.getElementById('results-grid');
-                if(grid && grid.children.length === 0 && window.quickSearch) {
-                    window.quickSearch('Top Hits 2024');
-                }
 
             } else {
                 // Guest Mode
@@ -236,46 +230,37 @@
             </div>
         </main>
 
-        <div id="music-widget" class="hidden absolute bottom-40 left-4 z-50 w-[320px] h-[500px] glass-panel rounded-[30px] shadow-2xl overflow-hidden flex flex-col transition-all duration-300 origin-bottom-left">
+        <div id="music-widget" class="hidden absolute bottom-40 left-4 z-50 w-[320px] h-32 glass-panel rounded-[30px] shadow-2xl overflow-hidden flex flex-col justify-between transition-all duration-300 origin-bottom-left">
             <div id="music-overlay-lock" class="absolute inset-0 z-30 bg-gray-900/95 backdrop-blur-md flex flex-col items-center justify-center text-center p-6">
                 <i class="fas fa-lock text-pink-500 text-2xl mb-4"></i>
                 <h3 class="text-white font-bold text-lg">DJ Mode Locked</h3>
                 <button onclick="googleLogin()" class="bg-blue-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg mt-4">Sign In</button>
             </div>
+            
             <div id="music-grid-content" class="flex flex-col h-full relative hidden">
-                <div class="p-5 flex justify-between items-center pb-2">
-                    <div class="flex items-center gap-2"><span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span><span class="font-bold text-white text-lg">Music</span></div>
-                    <div class="flex gap-3 text-gray-400 text-sm">
-                        <button onclick="toggleSearchInput()" class="hover:text-white p-1"><i class="fas fa-search"></i></button>
-                        <button onclick="toggleMusicWidget()" class="hover:text-white p-1"><i class="fas fa-times"></i></button>
+                <div class="p-4 flex justify-between items-start">
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span><span class="font-bold text-white text-lg">Comfort Music</span></div>
+                    <button onclick="toggleMusicWidget()" class="text-gray-400 hover:text-white p-1"><i class="fas fa-times"></i></button>
+                </div>
+
+                <div class="flex items-center justify-between p-4 pt-0">
+                    <button onclick="togglePlayPause()" class="w-12 h-12 bg-pink-600 text-white rounded-full flex items-center justify-center hover:scale-105 transition shadow-lg mr-4">
+                        <i id="play-icon" class="fas fa-play text-sm ml-1"></i>
+                    </button>
+                    
+                    <div class="flex-1 flex flex-col gap-1">
+                        <p class="text-xs font-bold text-gray-200 truncate">Ambient Lo-Fi Loop</p>
+                        <p class="text-[10px] text-gray-400">Set Volume:</p>
+                        <input type="range" min="0" max="100" value="30" class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg accent-pink-500" id="volume-slider" oninput="setMusicVolume(this.value)">
                     </div>
+                    
+                    <button onclick="toggleMute()" class="ml-4 text-gray-400 hover:text-white">
+                        <i id="mute-icon" class="fas fa-volume-up text-lg"></i>
+                    </button>
                 </div>
-                <div id="search-area" class="px-5 pb-3 hidden">
-                    <div class="relative"><input type="text" id="yt-search-query" placeholder="Search song..." class="w-full bg-black/40 border border-white/10 text-gray-200 text-xs rounded-xl pl-3 pr-9 py-3 focus:border-pink-500 outline-none" onkeypress="if(event.key === 'Enter') searchYouTube()"><button onclick="searchYouTube()" class="absolute right-2 top-2 text-gray-400 hover:text-pink-500 p-1.5"><i class="fas fa-arrow-right text-xs"></i></button></div>
-                </div>
-                <div class="px-5 flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
-                    <button onclick="quickSearch('Lofi Girl')" class="px-4 py-1.5 bg-gray-700/40 hover:bg-pink-600 text-white text-[10px] font-bold rounded-full border border-white/10 whitespace-nowrap">LOFI</button>
-                    <button onclick="quickSearch('Top Hits 2024')" class="px-4 py-1.5 bg-gray-700/40 hover:bg-pink-600 text-white text-[10px] font-bold rounded-full border border-white/10 whitespace-nowrap">POP</button>
-                    <button onclick="quickSearch('Study Piano')" class="px-4 py-1.5 bg-gray-700/40 hover:bg-pink-600 text-white text-[10px] font-bold rounded-full border border-white/10 whitespace-nowrap">FOCUS</button>
-                </div>
-                <div class="px-5 flex-1 overflow-y-auto scrollbar-hide pb-24">
-                    <div id="search-loader" class="hidden flex justify-center py-10"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-pink-500"></div></div>
-                    <div id="results-grid" class="grid grid-cols-2 gap-3"></div>
-                </div>
-                <div class="absolute bottom-0 left-0 right-0 bg-black/90 backdrop-blur-xl border-t border-white/10 p-4 z-20">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="w-10 h-10 rounded-lg overflow-hidden bg-gray-800 flex-shrink-0 shadow-md"><img id="current-art" src="https://via.placeholder.com/150" class="w-full h-full object-cover opacity-50"></div>
-                        <div class="flex-1 min-w-0 overflow-hidden"><p id="current-title" class="text-xs font-bold text-white truncate">No song playing</p><p id="current-artist" class="text-[10px] text-gray-400 truncate">Search to start</p></div>
-                    </div>
-                    <div class="flex items-center justify-between px-4">
-                        <button onclick="prevTrack()" class="text-gray-400 hover:text-white hover:scale-110 transition"><i class="fas fa-step-backward text-lg"></i></button>
-                        <button onclick="togglePlayPause()" class="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition shadow-lg"><i id="play-icon" class="fas fa-play text-sm ml-1"></i></button>
-                        <button onclick="nextTrack()" class="text-gray-400 hover:text-white hover:scale-110 transition"><i class="fas fa-step-forward text-lg"></i></button>
-                    </div>
-                </div>
-                <div id="player-container" class="absolute -bottom-[200px] left-0 w-1 h-1 opacity-0 pointer-events-none"></div>
             </div>
         </div>
+
 
         <div id="planner-widget" class="hidden absolute bottom-40 left-4 z-50 w-[360px] h-[550px] glass-panel rounded-[30px] shadow-2xl overflow-hidden flex flex-col transition-all duration-300 origin-bottom-left">
             <div id="planner-overlay-lock" class="absolute inset-0 z-30 bg-gray-900/95 backdrop-blur-md flex flex-col items-center justify-center text-center p-6">
@@ -304,14 +289,81 @@
         </div>
 
     </div>
+    
+    <audio id="comfort-audio-player" loop preload="auto">
+        <source src="YOUR_COMFORT_MUSIC_MP3_URL_HERE" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
 
     <script>
-        const YOUTUBE_API_KEY = "AIzaSyBxEieLXxQoZfF_qdjgP3oThpTNFuUu_LA"; 
         const N8N_WEBHOOK_URL = 'https://mavisszx.app.n8n.cloud/webhook/6256baba-f187-4251-9bc1-e89ccd5b5f8f';
 
         // GLOBAL STATE
         window.currentUserUID = 'guest';
         let scheduleData = {};
+        let isPlaying = false; 
+
+        // --- MUSIC PLAYER FUNCTIONS (NEW) ---
+        const audioPlayer = document.getElementById('comfort-audio-player');
+        const playIcon = document.getElementById('play-icon');
+        const muteIcon = document.getElementById('mute-icon');
+
+        // Set initial volume to 30%
+        audioPlayer.volume = 0.3; 
+
+        window.playComfortMusic = () => {
+            audioPlayer.play().catch(error => {
+                // This handles common browser restrictions where media cannot autoplay
+                console.warn("Autoplay was prevented. User must interact first.");
+            });
+            isPlaying = true;
+            playIcon.className = "fas fa-pause text-sm";
+        };
+
+        window.pauseComfortMusic = () => {
+            audioPlayer.pause();
+            isPlaying = false;
+            playIcon.className = "fas fa-play text-sm ml-1";
+        };
+        
+        window.togglePlayPause = () => {
+            if (isPlaying) {
+                pauseComfortMusic();
+            } else {
+                playComfortMusic();
+            }
+        };
+
+        window.setMusicVolume = (volume) => {
+            // Convert 0-100 slider value to 0.0-1.0 audio volume
+            audioPlayer.volume = volume / 100;
+            if (audioPlayer.volume > 0 && audioPlayer.muted) {
+                audioPlayer.muted = false;
+                muteIcon.className = "fas fa-volume-up text-lg";
+            } else if (audioPlayer.volume === 0) {
+                 audioPlayer.muted = true;
+                 muteIcon.className = "fas fa-volume-off text-lg";
+            }
+        };
+
+        window.toggleMute = () => {
+            audioPlayer.muted = !audioPlayer.muted;
+            if (audioPlayer.muted) {
+                muteIcon.className = "fas fa-volume-off text-lg";
+                // Store last volume before mute
+                audioPlayer.lastVolume = audioPlayer.volume;
+                audioPlayer.volume = 0;
+            } else {
+                muteIcon.className = "fas fa-volume-up text-lg";
+                // Restore volume from slider value, or to default if muted manually
+                audioPlayer.volume = document.getElementById('volume-slider').value / 100;
+            }
+        };
+
+        function toggleMusicWidget() { 
+            document.getElementById('planner-widget').classList.add('hidden'); 
+            document.getElementById('music-widget').classList.toggle('hidden'); 
+        }
 
         // --- CHAT (With Real-Time Context Injection) ---
         const chatContainer = document.getElementById('chat-messages');
@@ -334,7 +386,6 @@
             const payloadWithContext = `User Question: "${text}" \n [SYSTEM_DATA_CONTEXT] Current Day: ${dayName}. Current Schedule: ${currentSchedule}. If schedule is empty, tell user to use Planner.`;
 
             try {
-                // Expecting plain text string output from n8n for 'data.output'
                 const response = await fetch(N8N_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatInput: payloadWithContext }) });
                 const data = await response.json();
                 document.getElementById(loadingId)?.remove();
@@ -343,7 +394,6 @@
                 // Safety cleanup
                 if(reply.includes('[SYSTEM_DATA_CONTEXT]')) reply = reply.split('User Question:')[0]; 
                 
-                // Original call: no sticker parameter
                 addBubble(reply, 'bot'); 
 
             } catch (error) {
@@ -353,7 +403,7 @@
             }
         }
 
-        // Original Function addBubble (No sticker parameter)
+        // Original Function addBubble
         function addBubble(text, sender) {
             const div = document.createElement('div');
             div.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'} chat-bubble`;
@@ -374,97 +424,6 @@
             chatContainer.appendChild(div);
             chatContainer.scrollTop = chatContainer.scrollHeight;
             return div.id;
-        }
-
-        // --- MUSIC PLAYER ---
-        let player; let playlist = []; let currentIndex = 0; let isPlayerReady = false;
-        var tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api";
-        var firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('player-container', {
-                height: '1', width: '1', playerVars: { 'autoplay': 0, 'controls': 0 },
-                events: { 'onReady': (e)=>isPlayerReady=true, 'onStateChange': onPlayerStateChange, 'onError': onPlayerError }
-            });
-        }
-
-        function onPlayerStateChange(event) {
-            const icon = document.getElementById('play-icon');
-            if (event.data == YT.PlayerState.PLAYING) icon.className = "fas fa-pause text-sm";
-            else icon.className = "fas fa-play text-sm ml-1";
-            if (event.data == YT.PlayerState.ENDED) nextTrack();
-        }
-
-        function onPlayerError(event) {
-            if([100, 101, 150].includes(event.data)) setTimeout(() => nextTrack(), 500); 
-        }
-
-        window.quickSearch = function(q) { document.getElementById('yt-search-query').value = q; searchYouTube(q); }
-        function toggleMusicWidget() { 
-            document.getElementById('planner-widget').classList.add('hidden'); 
-            document.getElementById('music-widget').classList.toggle('hidden'); 
-            if(playlist.length === 0) window.quickSearch('Top Hits 2024'); 
-        }
-        function toggleSearchInput() { document.getElementById('search-area').classList.toggle('hidden'); }
-
-        async function searchYouTube(qOverride) {
-            const query = qOverride || document.getElementById('yt-search-query').value;
-            if (!query) return;
-            const grid = document.getElementById('results-grid');
-            const loader = document.getElementById('search-loader');
-            grid.innerHTML = ''; loader.classList.remove('hidden');
-            try {
-                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=10&q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&key=${YOUTUBE_API_KEY}`;
-                const res = await fetch(url);
-                const data = await res.json();
-                loader.classList.add('hidden');
-                if (data.items) {
-                    playlist = [];
-                    data.items.forEach((item, index) => {
-                        const vid = item.id.videoId;
-                        playlist.push({ id: vid, title: item.snippet.title, artist: item.snippet.channelTitle, img: item.snippet.thumbnails.medium.url });
-                        const card = document.createElement('div');
-                        card.className = "group relative aspect-square rounded-xl overflow-hidden cursor-pointer bg-gray-800 shadow-lg hover:shadow-pink-500/20 transition-all";
-                        card.onclick = () => playFromIndex(index);
-                        card.innerHTML = `<img src="${item.snippet.thumbnails.medium.url}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"><div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-3 flex flex-col justify-end"><span class="text-white font-bold text-xs line-clamp-1 drop-shadow-md">${item.snippet.title}</span></div><div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 backdrop-blur-[1px]"><div class="w-10 h-10 bg-pink-600 rounded-full flex items-center justify-center shadow-xl"><i class="fas fa-play text-white ml-1 text-xs"></i></div></div>`;
-                        grid.appendChild(card);
-                    });
-                }
-            } catch (e) { loader.classList.add('hidden'); console.error(e); }
-        }
-
-        function playFromIndex(index) {
-            if(index < 0 || index >= playlist.length) return;
-            currentIndex = index;
-            const track = playlist[currentIndex];
-            document.getElementById('current-title').innerText = track.title;
-            document.getElementById('current-artist').innerText = track.artist;
-            document.getElementById('current-art').src = track.img;
-            document.getElementById('current-art').classList.remove('opacity-50');
-            if(isPlayerReady) player.loadVideoById(track.id);
-        }
-
-        function togglePlayPause() {
-            if(!isPlayerReady || playlist.length === 0) {
-                document.getElementById('search-area').classList.remove('hidden');
-                document.getElementById('yt-search-query').focus();
-                return;
-            }
-            const state = player.getPlayerState();
-            if (state === YT.PlayerState.PLAYING) player.pauseVideo(); else player.playVideo();
-        }
-        function nextTrack() { if(currentIndex < playlist.length - 1) playFromIndex(currentIndex + 1); else playFromIndex(0); }
-        function prevTrack() { if(currentIndex > 0) playFromIndex(currentIndex - 1); }
-
-        window.stopMusicPlayer = () => {
-            if (player) { if(typeof player.stopVideo === 'function') player.stopVideo(); if(typeof player.cueVideoById === 'function') player.cueVideoById(''); }
-            document.getElementById('current-title').innerText = 'No song playing';
-            document.getElementById('current-artist').innerText = 'Search to start';
-            document.getElementById('current-art').src = 'https://via.placeholder.com/150';
-            document.getElementById('current-art').classList.add('opacity-50');
-            document.getElementById('play-icon').className = "fas fa-play text-sm ml-1";
-            document.getElementById('results-grid').innerHTML = '';
-            playlist = [];
         }
 
         // --- BREATHE WIDGET ---
@@ -507,7 +466,6 @@
         const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
         window.loadUserSchedule = () => {
-            // FIX: Changed storage key from 'pandora' to 'hikari'
             const key = `hikari_timetable_${window.currentUserUID}`;
             scheduleData = JSON.parse(localStorage.getItem(key)) || {};
             if (!document.getElementById('planner-widget').classList.contains('hidden')) renderTimetable();
@@ -558,7 +516,6 @@
             const venue = document.getElementById('course-venue').value;
             if(course) {
                 scheduleData[id] = { course, lecturer, venue };
-                // FIX: Changed storage key to 'hikari'
                 localStorage.setItem(`hikari_timetable_${window.currentUserUID}`, JSON.stringify(scheduleData));
                 renderTimetable();
                 closeTimetableModal();
@@ -568,7 +525,6 @@
         window.deleteTimetableSlot = () => {
             const id = document.getElementById('slot-id').value;
             delete scheduleData[id];
-            // FIX: Changed storage key to 'hikari'
             localStorage.setItem(`hikari_timetable_${window.currentUserUID}`, JSON.stringify(scheduleData));
             renderTimetable();
             closeTimetableModal();
@@ -591,7 +547,6 @@
                 newSlots.forEach(slot => {
                     if (!scheduleData[slot.id]) { scheduleData[slot.id] = { course: slot.course, lecturer: slot.lecturer, venue: slot.venue }; }
                 });
-                // FIX: Changed storage key to 'hikari'
                 localStorage.setItem(`hikari_timetable_${window.currentUserUID}`, JSON.stringify(scheduleData));
                 renderTimetable();
                 alert("✨ Schedule optimized for mental wellness!");
