@@ -38,7 +38,7 @@
         window.confirmLogout = () => {
             signOut(auth).then(() => { 
                 // 1. Stop Music
-                if(window.pauseComfortMusic) window.pauseComfortMusic(); 
+                if(window.audioPlayer) window.audioPlayer.pause(); 
                 
                 // 2. Clear Chat History
                 const chatContainer = document.getElementById('chat-messages');
@@ -75,8 +75,6 @@
             const userProfile = document.getElementById('user-profile');
             
             // Widget Locks
-            const musicOverlay = document.getElementById('music-overlay-lock');
-            const musicContent = document.getElementById('music-grid-content');
             const plannerOverlay = document.getElementById('planner-overlay-lock');
             const plannerContent = document.getElementById('planner-content');
 
@@ -87,8 +85,6 @@
                 userProfile.innerHTML = `<div class="flex items-center gap-3 w-full"><img src="${user.photoURL}" class="w-8 h-8 rounded-full border border-gray-600"><div class="flex-1 min-w-0"><p class="text-sm font-medium text-gray-300 truncate">${user.displayName}</p><button onclick="askLogout()" class="text-xs text-red-400 hover:text-red-300">Sign Out</button></div></div>`;
                 
                 // Unlock Widgets
-                if(musicOverlay) musicOverlay.classList.add('hidden');
-                if(musicContent) musicContent.classList.remove('hidden');
                 if(plannerOverlay) plannerOverlay.classList.add('hidden');
                 if(plannerContent) plannerContent.classList.remove('hidden');
 
@@ -96,7 +92,7 @@
                 if(window.loadUserSchedule) window.loadUserSchedule();
                 
                 // 🎵 NEW: Auto-play music on successful login
-                if (window.playComfortMusic) window.playComfortMusic();
+                if (window.startComfortMusic) window.startComfortMusic();
 
             } else {
                 // Guest Mode
@@ -104,15 +100,13 @@
                 userProfile.innerHTML = `<div class="flex items-center gap-3 w-full"><div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center"><i class="fas fa-user text-gray-400 text-xs"></i></div><div class="flex-1"><p class="text-sm font-medium text-gray-400">Guest</p><button onclick="googleLogin()" class="text-xs text-blue-400 hover:text-blue-300">Sign In</button></div></div>`;
                 
                 // Lock Widgets
-                if(musicOverlay) musicOverlay.classList.remove('hidden');
-                if(musicContent) musicContent.classList.add('hidden');
                 if(plannerOverlay) plannerOverlay.classList.remove('hidden');
                 if(plannerContent) plannerContent.classList.add('hidden');
 
                 if(window.loadUserSchedule) window.loadUserSchedule();
 
                 // 🎵 NEW: Auto-play music when continuing as guest
-                if (window.playComfortMusic) window.playComfortMusic();
+                if (window.startComfortMusic) window.startComfortMusic();
             }
         }
     </script>
@@ -212,7 +206,12 @@
             <div class="mb-6 px-2">
                 <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-3 pl-2">Wellness Tools</p>
                 <div class="grid grid-cols-3 gap-2">
-                    <button onclick="toggleMusicWidget()" class="w-12 h-12 bg-gray-800 hover:bg-gray-700 rounded-xl flex items-center justify-center text-pink-400 border border-gray-700 transition-all hover:scale-105 shadow-lg" title="DJ Mode"><i class="fas fa-music text-lg"></i></button>
+                    <button onclick="toggleMute()" id="sidebar-music-btn" class="w-12 h-12 bg-gray-800 hover:bg-gray-700 rounded-xl flex items-center justify-center text-pink-400 border border-gray-700 transition-all hover:scale-105 shadow-lg" title="Toggle Music">
+                        <span class="fa-stack fa-lg">
+                            <i id="sidebar-music-icon-base" class="fas fa-music fa-stack-1x"></i>
+                            <i id="sidebar-music-icon-slash" class="fas fa-slash fa-stack-1x text-gray-400 hidden"></i>
+                        </span>
+                    </button>
                     <button onclick="togglePlannerWidget()" class="w-12 h-12 bg-gray-800 hover:bg-green-900/20 rounded-xl flex items-center justify-center text-green-400 border border-gray-700 transition-all hover:scale-105 shadow-lg" title="Timetable"><i class="fas fa-calendar-alt text-lg"></i></button>
                     <button onclick="toggleBreatheWidget()" class="w-12 h-12 bg-gray-800 hover:bg-blue-900/20 rounded-xl flex items-center justify-center text-blue-400 border border-gray-700 transition-all hover:scale-105 shadow-lg" title="Breathe"><i class="fas fa-wind text-lg"></i></button>
                 </div>
@@ -225,7 +224,12 @@
             <div class="md:hidden flex justify-between items-center p-4 border-b border-gray-800 bg-gray-900/90 backdrop-blur z-20">
                 <span class="font-bold text-white flex items-center gap-2"><span class="text-xl">🌸</span> Hikari</span>
                 <div class="flex gap-2">
-                    <button onclick="toggleMusicWidget()" class="text-pink-400 p-2 bg-gray-800 rounded-full border border-gray-700"><i class="fas fa-music"></i></button>
+                    <button onclick="toggleMute()" class="text-pink-400 p-2 bg-gray-800 rounded-full border border-gray-700">
+                        <span class="fa-stack fa-sm">
+                            <i id="mobile-music-icon-base" class="fas fa-music fa-stack-1x"></i>
+                            <i id="mobile-music-icon-slash" class="fas fa-slash fa-stack-1x text-gray-400 hidden"></i>
+                        </span>
+                    </button>
                     <button onclick="togglePlannerWidget()" class="text-green-400 p-2 bg-gray-800 rounded-full border border-gray-700"><i class="fas fa-calendar"></i></button>
                     <button onclick="toggleBreatheWidget()" class="text-blue-400 p-2 bg-gray-800 rounded-full border border-gray-700"><i class="fas fa-wind"></i></button>
                 </div>
@@ -242,38 +246,7 @@
                 </div>
             </div>
         </main>
-
-        <div id="music-widget" class="hidden absolute bottom-40 left-4 z-50 w-[320px] h-32 glass-panel rounded-[30px] shadow-2xl overflow-hidden flex flex-col justify-between transition-all duration-300 origin-bottom-left">
-            <div id="music-overlay-lock" class="absolute inset-0 z-30 bg-gray-900/95 backdrop-blur-md flex flex-col items-center justify-center text-center p-6">
-                <i class="fas fa-lock text-pink-500 text-2xl mb-4"></i>
-                <h3 class="text-white font-bold text-lg">DJ Mode Locked</h3>
-                <button onclick="googleLogin()" class="bg-blue-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg mt-4">Sign In</button>
-            </div>
-            
-            <div id="music-grid-content" class="flex flex-col h-full relative hidden">
-                <div class="p-4 flex justify-between items-start">
-                    <div class="flex items-center gap-2"><span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span><span class="font-bold text-white text-lg">Comfort Music</span></div>
-                    <button onclick="toggleMusicWidget()" class="text-gray-400 hover:text-white p-1"><i class="fas fa-times"></i></button>
-                </div>
-
-                <div class="flex items-center justify-center p-4 pt-0">
-                    <button onclick="togglePlayPause()" class="w-16 h-16 bg-pink-600 text-white rounded-full flex items-center justify-center hover:scale-105 transition shadow-lg mr-6">
-                        <i id="play-icon" class="fas fa-pause text-xl"></i>
-                    </button>
-                    
-                    <div class="flex-1 flex flex-col gap-1">
-                        <p class="text-xs font-bold text-gray-200 truncate">Ambient Lo-Fi Loop</p>
-                        <p class="text-[10px] text-gray-400" id="music-status-text">Status: Paused</p>
-                    </div>
-                    
-                    <button onclick="toggleMute()" class="ml-4 text-gray-400 hover:text-white">
-                        <i id="mute-icon" class="fas fa-volume-up text-lg"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-
+        
         <div id="planner-widget" class="hidden absolute bottom-40 left-4 z-50 w-[360px] h-[550px] glass-panel rounded-[30px] shadow-2xl overflow-hidden flex flex-col transition-all duration-300 origin-bottom-left">
             <div id="planner-overlay-lock" class="absolute inset-0 z-30 bg-gray-900/95 backdrop-blur-md flex flex-col items-center justify-center text-center p-6">
                 <i class="fas fa-lock text-pink-500 text-2xl mb-4"></i>
@@ -313,62 +286,57 @@
         // GLOBAL STATE
         window.currentUserUID = 'guest';
         let scheduleData = {};
-        let isPlaying = false; 
 
-        // --- MUSIC PLAYER FUNCTIONS (NEW) ---
+        // --- MUSIC PLAYER FUNCTIONS (STREAMLINED: Auto-Play/Mute Toggle) ---
         const audioPlayer = document.getElementById('comfort-audio-player');
-        const playIcon = document.getElementById('play-icon');
-        const muteIcon = document.getElementById('mute-icon');
-        const musicStatus = document.getElementById('music-status-text');
-
-
+        
+        // 💡 NEW ICON ELEMENTS (targeting the slash icon in the stack)
+        const sidebarMusicIconSlash = document.getElementById('sidebar-music-icon-slash');
+        const mobileMusicIconSlash = document.getElementById('mobile-music-icon-slash');
+        
         // Set initial volume to a safe level (30%)
         audioPlayer.volume = 0.3; 
-
-        window.playComfortMusic = () => {
-            // Attempt to play. This catches the browser's autoplay block.
+        
+        // 1. Initial Auto-Play Logic
+        window.startComfortMusic = () => {
+            // Try to play the music. This addresses browser policies.
             audioPlayer.play().then(() => {
-                isPlaying = true;
-                playIcon.className = "fas fa-pause text-xl";
-                musicStatus.innerText = "Status: Playing";
+                updateMusicIcons(false); // Music playing, slash hidden
             }).catch(error => {
                 console.warn("Autoplay was prevented. User must interact first.");
-                isPlaying = false;
-                playIcon.className = "fas fa-play text-xl ml-1"; // Show the Play icon since it's currently paused
-                musicStatus.innerText = "Status: Paused";
+                audioPlayer.muted = true; 
+                updateMusicIcons(true); // Music muted, slash visible
             });
         };
 
-        window.pauseComfortMusic = () => {
-            audioPlayer.pause();
-            isPlaying = false;
-            playIcon.className = "fas fa-play text-xl ml-1";
-            musicStatus.innerText = "Status: Paused";
-        };
-        
-        window.togglePlayPause = () => {
-            if (isPlaying) {
-                pauseComfortMusic();
+        // 2. Icon Update Helper
+        function updateMusicIcons(isMuted) {
+            // Toggle the 'hidden' class on the slash element
+            if (isMuted) {
+                if (sidebarMusicIconSlash) sidebarMusicIconSlash.classList.remove('hidden');
+                if (mobileMusicIconSlash) mobileMusicIconSlash.classList.remove('hidden');
             } else {
-                playComfortMusic();
+                if (sidebarMusicIconSlash) sidebarMusicIconSlash.classList.add('hidden');
+                if (mobileMusicIconSlash) mobileMusicIconSlash.classList.add('hidden');
             }
-        };
+        }
 
-        // Simplified toggleMute - hides/shows the volume icons
+        // 3. Main Mute/Unmute Toggle (Called directly by both music buttons)
         window.toggleMute = () => {
             audioPlayer.muted = !audioPlayer.muted;
-            if (audioPlayer.muted) {
-                muteIcon.className = "fas fa-volume-off text-lg";
-                musicStatus.innerText = "Status: Muted";
+            
+            if (!audioPlayer.muted) {
+                audioPlayer.play();
+                updateMusicIcons(false); // Hide slash
             } else {
-                muteIcon.className = "fas fa-volume-up text-lg";
-                if (isPlaying) musicStatus.innerText = "Status: Playing";
+                updateMusicIcons(true); // Show slash
             }
         };
 
-        function toggleMusicWidget() { 
-            document.getElementById('planner-widget').classList.add('hidden'); 
-            document.getElementById('music-widget').classList.toggle('hidden'); 
+        window.togglePlannerWidget = () => {
+            const w = document.getElementById('planner-widget');
+            w.classList.toggle('hidden');
+            if (!w.classList.contains('hidden')) renderTimetable();
         }
 
         // --- CHAT (With Real-Time Context Injection) ---
@@ -389,7 +357,7 @@
             const currentSchedule = JSON.stringify(scheduleData);
             
             // 💡 MODIFIED: Inject current day into the payload for the n8n agent
-            const payloadWithContext = `User Question: "${text}" \n [SYSTEM_DATA_CONTEXT] Current Day: ${dayName}. Current Schedule: ${currentSchedule}. If schedule is empty, tell user to use Planner.`;
+            const payloadWithContext = `User Question: "${text}" \n [SYSTEM_DATA_CONTEXT] Current Day: ${dayName}. Current Schedule: ${currentSchedule}. If schedule is empty, tell user to use Planner. The AI's response must use Markdown bold (e.g., **time**) for important details.`;
 
             try {
                 // Expecting plain text string output from n8n for 'data.output'
@@ -411,13 +379,21 @@
             }
         }
 
-        // Original Function addBubble (No sticker parameter)
+        // 🌟 UPDATED FUNCTION: Now converts Markdown bold/italics to HTML tags
         function addBubble(text, sender) {
             const div = document.createElement('div');
             // 💡 FIX: Added custom class for bot's bubble
             div.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'} chat-bubble`;
             const bubbleStyle = sender === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none border border-gray-700 bot-text-area';
             
+            // 👇 NEW: Convert Markdown **bold** and *italic* to HTML
+            if (sender === 'bot') {
+                // 1. Convert **bold** to <strong>bold</strong>
+                text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                // 2. Convert *italic* to <em>italic</em>
+                text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            }
+
             // Note: The 'bot-text-area' class is applied here
             let contentHTML = `<div class="${bubbleStyle} rounded-2xl py-3 px-5 max-w-[85%] shadow-md text-sm">${text}</div>`;
             
@@ -482,7 +458,6 @@
         };
 
         window.togglePlannerWidget = () => {
-            document.getElementById('music-widget').classList.add('hidden'); 
             const w = document.getElementById('planner-widget');
             w.classList.toggle('hidden');
             if (!w.classList.contains('hidden')) renderTimetable();
@@ -500,6 +475,8 @@
                     const cell = document.createElement('div');
                     cell.className = `rounded-lg border cursor-pointer transition-all p-1 flex flex-col justify-center items-center text-center overflow-hidden ${data ? 'bg-green-900/40 border-green-500/50 hover:bg-green-900/60' : 'bg-white/5 border-white/5 hover:bg-white/10'}`;
                     cell.onclick = () => openTimetableModal(slotId);
+                    // When rendering the timetable, we don't convert the Markdown **bold** saved in data.course, 
+                    // since the cell is too small. We display the raw text.
                     if (data) cell.innerHTML = `<div class="text-[9px] font-bold text-green-300 leading-tight">${data.course}</div><div class="text-[8px] text-green-500/70">${data.venue}</div>`;
                     else cell.innerHTML = `<i class="fas fa-plus text-[8px] text-gray-600 opacity-0 group-hover:opacity-100"></i>`;
                     row.appendChild(cell);
@@ -511,7 +488,11 @@
         window.openTimetableModal = (slotId) => {
             document.getElementById('slot-id').value = slotId;
             const data = scheduleData[slotId];
-            document.getElementById('course-name').value = data ? data.course : '';
+            
+            // Remove the Markdown **bold** formatting for the input field display
+            const courseName = data ? data.course.replace(/\*\*(.*?)\*\*/g, '$1') : '';
+            
+            document.getElementById('course-name').value = courseName;
             document.getElementById('course-lecturer').value = data ? data.lecturer : '';
             document.getElementById('course-venue').value = data ? data.venue : '';
             document.getElementById('timetable-modal').classList.remove('hidden');
@@ -521,9 +502,15 @@
 
         window.saveTimetableSlot = () => {
             const id = document.getElementById('slot-id').value;
-            const course = document.getElementById('course-name').value;
+            let course = document.getElementById('course-name').value; // Get the raw value
             const lecturer = document.getElementById('course-lecturer').value;
             const venue = document.getElementById('course-venue').value;
+            
+            // Re-apply Markdown bolding when saving, for consistency with AI auto-fill
+            if (course && !course.startsWith('**') && !course.endsWith('**')) {
+                course = `**${course}**`;
+            }
+            
             if(course) {
                 scheduleData[id] = { course, lecturer, venue };
                 localStorage.setItem(`hikari_timetable_${window.currentUserUID}`, JSON.stringify(scheduleData));
@@ -540,13 +527,16 @@
             closeTimetableModal();
         }
 
+        // 🌟 UPDATED FUNCTION: Prompt instructs AI to use Markdown bold (**) in the output JSON.
         window.autoFillSchedule = async () => {
             const btn = document.querySelector('#planner-widget button i.fa-magic').parentNode;
             const originalText = btn.innerHTML;
             btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Designing Routine...`;
             
             const currentScheduleJSON = JSON.stringify(scheduleData);
-            const aiPrompt = `Here is my current fixed schedule: ${currentScheduleJSON}. Please generate a JSON Array to fill the empty slots based on healthy student habits. The IDs for empty slots look like "Mon-08:00", "Tue-10:00", etc. Return JSON ONLY. Format: [{"id": "Day-Time", "course": "Activity Name", "venue": "Location", "lecturer": "Category"}]`;
+            
+            // IMPORTANT: Request Markdown bold (**) inside the course name value!
+            const aiPrompt = `Here is my current fixed schedule: ${currentScheduleJSON}. Please generate a JSON Array to fill the empty slots based on healthy student habits (e.g., study, wellness, breaks). The IDs for empty slots look like "Mon-08:00", "Tue-10:00", etc. For the "course" field, always enclose the main activity name in Markdown bold (**Activity Name**). Return JSON ONLY. Format: [{"id": "Day-Time", "course": "**Activity Name**", "venue": "Location", "lecturer": "Category"}]`;
 
             try {
                 const response = await fetch(N8N_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatInput: aiPrompt }) });
@@ -559,7 +549,7 @@
                 });
                 localStorage.setItem(`hikari_timetable_${window.currentUserUID}`, JSON.stringify(scheduleData));
                 renderTimetable();
-                alert("✨ Schedule optimized for mental wellness!");
+                alert("✨ Schedule optimized for mental wellness! Tap on the new slots to view details.");
             } catch (error) {
                 console.error("AI Error:", error);
                 alert("AI couldn't generate the schedule. Check console.");
