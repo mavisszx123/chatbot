@@ -34,13 +34,10 @@
         window.askLogout = () => document.getElementById('logout-modal').classList.remove('hidden');
         window.closeModal = () => document.getElementById('logout-modal').classList.add('hidden');
 
-        // 🔴 LOGOUT LOGIC (Updated to Clear Chat)
+        // 🔴 LOGOUT LOGIC
         window.confirmLogout = () => {
             signOut(auth).then(() => { 
-                // 1. Stop Music
                 if(window.audioPlayer) window.audioPlayer.pause(); 
-                
-                // 2. Clear Chat History
                 const chatContainer = document.getElementById('chat-messages');
                 chatContainer.innerHTML = `
                     <div class="flex justify-start">
@@ -49,8 +46,6 @@
                         </div>
                     </div>
                 `;
-
-                // 3. Update UI
                 updateUI(null); 
                 closeModal();
             }); 
@@ -70,42 +65,25 @@
             }
         });
 
-        // UI Manager (Handles Account Switching & Data Loading)
+        // UI Manager
         window.updateUI = (user) => {
             const userProfile = document.getElementById('user-profile');
-            
-            // Widget Locks
             const plannerOverlay = document.getElementById('planner-overlay-lock');
             const plannerContent = document.getElementById('planner-content');
 
             if (user) {
-                // Set User ID for Data Saving
                 window.currentUserUID = user.uid;
-
                 userProfile.innerHTML = `<div class="flex items-center gap-3 w-full"><img src="${user.photoURL}" class="w-8 h-8 rounded-full border border-gray-600"><div class="flex-1 min-w-0"><p class="text-sm font-medium text-gray-300 truncate">${user.displayName}</p><button onclick="askLogout()" class="text-xs text-red-400 hover:text-red-300">Sign Out</button></div></div>`;
-                
-                // Unlock Widgets
                 if(plannerOverlay) plannerOverlay.classList.add('hidden');
                 if(plannerContent) plannerContent.classList.remove('hidden');
-
-                // Load Data
                 if(window.loadUserSchedule) window.loadUserSchedule();
-                
-                // 🎵 NEW: Auto-play music on successful login
                 if (window.startComfortMusic) window.startComfortMusic();
-
             } else {
-                // Guest Mode
                 window.currentUserUID = 'guest';
                 userProfile.innerHTML = `<div class="flex items-center gap-3 w-full"><div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center"><i class="fas fa-user text-gray-400 text-xs"></i></div><div class="flex-1"><p class="text-sm font-medium text-gray-400">Guest</p><button onclick="googleLogin()" class="text-xs text-blue-400 hover:text-blue-300">Sign In</button></div></div>`;
-                
-                // Lock Widgets
                 if(plannerOverlay) plannerOverlay.classList.remove('hidden');
                 if(plannerContent) plannerContent.classList.add('hidden');
-
                 if(window.loadUserSchedule) window.loadUserSchedule();
-
-                // 🎵 NEW: Auto-play music when continuing as guest
                 if (window.startComfortMusic) window.startComfortMusic();
             }
         }
@@ -133,7 +111,6 @@
         .breath-hold { transform: scale(1.1); transition: transform 0s; } 
         .breath-exhale { transform: scale(0.5); transition: transform 8s ease-in-out; }
         
-        /* 💡 CRITICAL FIX: Ensure the bot's text area respects the line breaks from the AI */
         .bot-text-area {
             white-space: pre-wrap;
             list-style: none;
@@ -216,7 +193,6 @@
                     <button onclick="toggleBreatheWidget()" class="w-12 h-12 bg-gray-800 hover:bg-blue-900/20 rounded-xl flex items-center justify-center text-blue-400 border border-gray-700 transition-all hover:scale-105 shadow-lg" title="Breathe"><i class="fas fa-wind text-lg"></i></button>
                 </div>
             </div>
-            
             <div id="user-profile" class="pt-4 border-t border-gray-800"></div>
         </aside>
 
@@ -254,7 +230,6 @@
                 <p class="text-gray-400 text-xs mb-4">Sign in to plan your routine.</p>
                 <button onclick="googleLogin()" class="bg-blue-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg mt-4">Sign In</button>
             </div>
-
             <div id="planner-content" class="flex flex-col h-full relative hidden">
                 <div class="p-5 border-b border-white/5 bg-black/20 flex justify-between items-center">
                     <div><h3 class="font-bold text-green-100 text-lg flex items-center gap-2"><i class="fas fa-calendar-alt text-green-500"></i> Schedule</h3></div>
@@ -287,49 +262,44 @@
         window.currentUserUID = 'guest';
         let scheduleData = {};
 
-        // --- MUSIC PLAYER FUNCTIONS (STREAMLINED: Auto-Play/Mute Toggle) ---
+        // --- MUSIC PLAYER FUNCTIONS ---
         const audioPlayer = document.getElementById('comfort-audio-player');
-        
-        // 💡 NEW ICON ELEMENTS (targeting the slash icon in the stack)
         const sidebarMusicIconSlash = document.getElementById('sidebar-music-icon-slash');
         const mobileMusicIconSlash = document.getElementById('mobile-music-icon-slash');
         
-        // Set initial volume to a safe level (30%)
+        // Set initial volume (30%)
         audioPlayer.volume = 0.3; 
         
-        // 1. Initial Auto-Play Logic
+        // Auto-play with Interaction Handling
         window.startComfortMusic = () => {
-            // Try to play the music. This addresses browser policies.
             audioPlayer.play().then(() => {
-                updateMusicIcons(false); // Music playing, slash hidden
+                updateMusicIcons(false); 
             }).catch(error => {
-                console.warn("Autoplay was prevented. User must interact first.");
+                console.warn("Autoplay prevented. Waiting for user interaction.");
                 audioPlayer.muted = true; 
-                updateMusicIcons(true); // Music muted, slash visible
+                updateMusicIcons(true); 
             });
         };
 
-        // 2. Icon Update Helper
         function updateMusicIcons(isMuted) {
-            // Toggle the 'hidden' class on the slash element
             if (isMuted) {
+                // Show the slash if muted
                 if (sidebarMusicIconSlash) sidebarMusicIconSlash.classList.remove('hidden');
                 if (mobileMusicIconSlash) mobileMusicIconSlash.classList.remove('hidden');
             } else {
+                // Hide the slash if playing
                 if (sidebarMusicIconSlash) sidebarMusicIconSlash.classList.add('hidden');
                 if (mobileMusicIconSlash) mobileMusicIconSlash.classList.add('hidden');
             }
         }
 
-        // 3. Main Mute/Unmute Toggle (Called directly by both music buttons)
         window.toggleMute = () => {
             audioPlayer.muted = !audioPlayer.muted;
-            
             if (!audioPlayer.muted) {
                 audioPlayer.play();
-                updateMusicIcons(false); // Hide slash
+                updateMusicIcons(false); 
             } else {
-                updateMusicIcons(true); // Show slash
+                updateMusicIcons(true); 
             }
         };
 
@@ -339,7 +309,7 @@
             if (!w.classList.contains('hidden')) renderTimetable();
         }
 
-        // --- CHAT (With Real-Time Context Injection) ---
+        // --- CHAT FUNCTIONS ---
         const chatContainer = document.getElementById('chat-messages');
         const userInput = document.getElementById('user-input');
 
@@ -350,28 +320,18 @@
             userInput.value = '';
             const loadingId = addLoadingBubble();
             
-            // 💡 FIX: Get the current day name for real-time schedule queries
             const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-
-            // INJECT SCHEDULE CONTEXT
             const currentSchedule = JSON.stringify(scheduleData);
-            
-            // 💡 MODIFIED: Inject current day into the payload for the n8n agent
             const payloadWithContext = `User Question: "${text}" \n [SYSTEM_DATA_CONTEXT] Current Day: ${dayName}. Current Schedule: ${currentSchedule}. If schedule is empty, tell user to use Planner. The AI's response must use Markdown bold (e.g., **time**) for important details.`;
 
             try {
-                // Expecting plain text string output from n8n for 'data.output'
                 const response = await fetch(N8N_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatInput: payloadWithContext }) });
                 const data = await response.json();
                 document.getElementById(loadingId)?.remove();
                 
                 let reply = data.output || "I'm thinking...";
-                // Safety cleanup
                 if(reply.includes('[SYSTEM_DATA_CONTEXT]')) reply = reply.split('User Question:')[0]; 
-                
-                // Original call: no sticker parameter
                 addBubble(reply, 'bot'); 
-
             } catch (error) {
                 document.getElementById(loadingId)?.remove();
                 console.error("Chat Error:", error); 
@@ -379,23 +339,48 @@
             }
         }
 
-        // 🌟 UPDATED FUNCTION: Now converts Markdown bold/italics to HTML tags
+        // 🌟 UPGRADED ADD BUBBLE FUNCTION (WITH CLEANUP + STICKERS)
         function addBubble(text, sender) {
+            // 1. CLEANUP: Remove invisible spaces/newlines from the start & end
+            text = text ? text.trim() : "";
+
             const div = document.createElement('div');
-            // 💡 FIX: Added custom class for bot's bubble
             div.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'} chat-bubble`;
-            const bubbleStyle = sender === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none border border-gray-700 bot-text-area';
             
-            // 👇 NEW: Convert Markdown **bold** and *italic* to HTML
+            const bubbleStyle = sender === 'user' 
+                ? 'bg-blue-600 text-white rounded-br-none' 
+                : 'bg-gray-800 text-gray-200 rounded-bl-none border border-gray-700 bot-text-area';
+            
+            let mediaHTML = '';
+
+            // CHECK FOR STICKERS: ![alt](url)
+            const imgRegex = /!\[.*?\]\((.*?)\)/;
+            const match = text.match(imgRegex);
+
+            if (match) {
+                const imgUrl = match[1]; 
+                mediaHTML = `
+                    <div class="mt-3 mb-1">
+                        <img src="${imgUrl}" class="rounded-xl max-h-40 w-auto border-2 border-pink-500/50 shadow-lg hover:scale-105 transition-transform duration-300 block">
+                    </div>
+                `;
+                // Remove the sticker code from the text
+                text = text.replace(match[0], '').trim(); 
+            }
+
+            // FORMAT TEXT (Markdown to HTML)
             if (sender === 'bot') {
-                // 1. Convert **bold** to <strong>bold</strong>
                 text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                // 2. Convert *italic* to <em>italic</em>
                 text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
             }
 
-            // Note: The 'bot-text-area' class is applied here
-            let contentHTML = `<div class="${bubbleStyle} rounded-2xl py-3 px-5 max-w-[85%] shadow-md text-sm">${text}</div>`;
+            // RENDER (Using flex-col to stack text above image)
+            let contentHTML = `
+                <div class="${bubbleStyle} rounded-2xl py-3 px-5 max-w-[85%] shadow-md text-sm leading-relaxed flex flex-col">
+                    <span>${text}</span>
+                    ${mediaHTML}
+                </div>
+            `;
             
             div.innerHTML = contentHTML;
             chatContainer.appendChild(div);
@@ -427,7 +412,6 @@
             circle.style.transform = "scale(0.5)";
             breatheTimeouts.forEach(clearTimeout);
             breatheTimeouts = [];
-            
             function runCycle() {
                 text.innerText = "INHALE (4s)"; circle.className = "absolute inset-0 bg-blue-500/20 rounded-full breath-inhale";
                 breatheTimeouts.push(setTimeout(() => {
@@ -457,12 +441,6 @@
             if (!document.getElementById('planner-widget').classList.contains('hidden')) renderTimetable();
         };
 
-        window.togglePlannerWidget = () => {
-            const w = document.getElementById('planner-widget');
-            w.classList.toggle('hidden');
-            if (!w.classList.contains('hidden')) renderTimetable();
-        }
-
         function renderTimetable() {
             const grid = document.getElementById('timetable-grid');
             grid.innerHTML = '';
@@ -475,8 +453,6 @@
                     const cell = document.createElement('div');
                     cell.className = `rounded-lg border cursor-pointer transition-all p-1 flex flex-col justify-center items-center text-center overflow-hidden ${data ? 'bg-green-900/40 border-green-500/50 hover:bg-green-900/60' : 'bg-white/5 border-white/5 hover:bg-white/10'}`;
                     cell.onclick = () => openTimetableModal(slotId);
-                    // When rendering the timetable, we don't convert the Markdown **bold** saved in data.course, 
-                    // since the cell is too small. We display the raw text.
                     if (data) cell.innerHTML = `<div class="text-[9px] font-bold text-green-300 leading-tight">${data.course}</div><div class="text-[8px] text-green-500/70">${data.venue}</div>`;
                     else cell.innerHTML = `<i class="fas fa-plus text-[8px] text-gray-600 opacity-0 group-hover:opacity-100"></i>`;
                     row.appendChild(cell);
@@ -488,10 +464,7 @@
         window.openTimetableModal = (slotId) => {
             document.getElementById('slot-id').value = slotId;
             const data = scheduleData[slotId];
-            
-            // Remove the Markdown **bold** formatting for the input field display
             const courseName = data ? data.course.replace(/\*\*(.*?)\*\*/g, '$1') : '';
-            
             document.getElementById('course-name').value = courseName;
             document.getElementById('course-lecturer').value = data ? data.lecturer : '';
             document.getElementById('course-venue').value = data ? data.venue : '';
@@ -502,15 +475,12 @@
 
         window.saveTimetableSlot = () => {
             const id = document.getElementById('slot-id').value;
-            let course = document.getElementById('course-name').value; // Get the raw value
+            let course = document.getElementById('course-name').value;
             const lecturer = document.getElementById('course-lecturer').value;
             const venue = document.getElementById('course-venue').value;
-            
-            // Re-apply Markdown bolding when saving, for consistency with AI auto-fill
             if (course && !course.startsWith('**') && !course.endsWith('**')) {
                 course = `**${course}**`;
             }
-            
             if(course) {
                 scheduleData[id] = { course, lecturer, venue };
                 localStorage.setItem(`hikari_timetable_${window.currentUserUID}`, JSON.stringify(scheduleData));
@@ -527,15 +497,12 @@
             closeTimetableModal();
         }
 
-        // 🌟 UPDATED FUNCTION: Prompt instructs AI to use Markdown bold (**) in the output JSON.
         window.autoFillSchedule = async () => {
             const btn = document.querySelector('#planner-widget button i.fa-magic').parentNode;
             const originalText = btn.innerHTML;
             btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Designing Routine...`;
             
             const currentScheduleJSON = JSON.stringify(scheduleData);
-            
-            // IMPORTANT: Request Markdown bold (**) inside the course name value!
             const aiPrompt = `Here is my current fixed schedule: ${currentScheduleJSON}. Please generate a JSON Array to fill the empty slots based on healthy student habits (e.g., study, wellness, breaks). The IDs for empty slots look like "Mon-08:00", "Tue-10:00", etc. For the "course" field, always enclose the main activity name in Markdown bold (**Activity Name**). Return JSON ONLY. Format: [{"id": "Day-Time", "course": "**Activity Name**", "venue": "Location", "lecturer": "Category"}]`;
 
             try {
