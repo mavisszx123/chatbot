@@ -313,7 +313,7 @@
         window.currentUserUID = 'guest';
         let scheduleData = {};
 
-        // --- CHAT (Original Text Response Logic) ---
+        // --- CHAT (With Real-Time Context Injection) ---
         const chatContainer = document.getElementById('chat-messages');
         const userInput = document.getElementById('user-input');
 
@@ -324,9 +324,14 @@
             userInput.value = '';
             const loadingId = addLoadingBubble();
             
+            // 💡 FIX: Get the current day name for real-time schedule queries
+            const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+
             // INJECT SCHEDULE CONTEXT
             const currentSchedule = JSON.stringify(scheduleData);
-            const payloadWithContext = `User Question: "${text}" \n [SYSTEM_DATA_CONTEXT] Current Schedule: ${currentSchedule}. If schedule is empty, tell user to use Planner.`;
+            
+            // 💡 MODIFIED: Inject current day into the payload for the n8n agent
+            const payloadWithContext = `User Question: "${text}" \n [SYSTEM_DATA_CONTEXT] Current Day: ${dayName}. Current Schedule: ${currentSchedule}. If schedule is empty, tell user to use Planner.`;
 
             try {
                 // Expecting plain text string output from n8n for 'data.output'
@@ -502,7 +507,7 @@
         const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
         window.loadUserSchedule = () => {
-            // FIX: Changed storage key to 'hikari'
+            // FIX: Changed storage key from 'pandora' to 'hikari'
             const key = `hikari_timetable_${window.currentUserUID}`;
             scheduleData = JSON.parse(localStorage.getItem(key)) || {};
             if (!document.getElementById('planner-widget').classList.contains('hidden')) renderTimetable();
