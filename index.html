@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Hikari - Your AI Companion</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -27,14 +27,11 @@
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
 
-        // Auth Functions
         window.googleLogin = () => signInWithPopup(auth, provider).then((r) => updateUI(r.user)).catch(console.error);
         
-        // Modal Triggers
         window.askLogout = () => document.getElementById('logout-modal').classList.remove('hidden');
         window.closeModal = () => document.getElementById('logout-modal').classList.add('hidden');
 
-        // 🔴 LOGOUT LOGIC
         window.confirmLogout = () => {
             signOut(auth).then(() => { 
                 if(window.audioPlayer) window.audioPlayer.pause(); 
@@ -65,7 +62,6 @@
             }
         });
 
-        // UI Manager
         window.updateUI = (user) => {
             const userProfile = document.getElementById('user-profile');
             const plannerOverlay = document.getElementById('planner-overlay-lock');
@@ -91,6 +87,13 @@
 
     <style>
         body { font-family: 'Nunito', sans-serif; }
+        
+        /* 💡 MOBILE FIX: Use dynamic viewport height to handle mobile address bars */
+        .h-dynamic-screen {
+            height: 100vh; /* Fallback */
+            height: 100dvh; /* Dynamic Viewport Height */
+        }
+
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 10px; }
@@ -111,14 +114,10 @@
         .breath-hold { transform: scale(1.1); transition: transform 0s; } 
         .breath-exhale { transform: scale(0.5); transition: transform 8s ease-in-out; }
         
-        .bot-text-area {
-            white-space: pre-wrap;
-            list-style: none;
-            padding-left: 0;
-        }
+        .bot-text-area { white-space: pre-wrap; list-style: none; padding-left: 0; }
     </style>
 </head>
-<body class="bg-gray-900 h-screen overflow-hidden relative text-gray-200 selection:bg-pink-500 selection:text-white">
+<body class="bg-gray-900 h-dynamic-screen overflow-hidden relative text-gray-200 selection:bg-pink-500 selection:text-white">
 
     <div id="logout-modal" class="hidden absolute inset-0 z-[90] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 transition-opacity">
         <div class="bg-gray-800 border border-gray-600 p-6 rounded-2xl shadow-2xl max-w-xs w-full text-center">
@@ -215,15 +214,15 @@
                 <div class="flex justify-start"><div class="bg-gray-800 text-gray-200 rounded-2xl rounded-bl-none py-3 px-5 max-w-[85%] md:max-w-[70%] shadow-md border border-gray-700">Hey! I'm Hikari. 🌸<br>I'm here to listen. How are you feeling?</div></div>
             </div>
 
-            <div class="p-4 bg-gray-900 border-t border-gray-800">
+            <div class="p-4 bg-gray-900 border-t border-gray-800 shrink-0">
                 <div class="max-w-3xl mx-auto relative">
-                    <input type="text" id="user-input" class="w-full bg-gray-800 border border-gray-700 text-white rounded-full pl-6 pr-14 py-4 focus:outline-none focus:border-pink-500 shadow-lg placeholder-gray-500" placeholder="Type message..." onkeypress="if(event.key === 'Enter') sendMessage()">
+                    <input type="text" id="user-input" class="w-full bg-gray-800 border border-gray-700 text-white text-base rounded-full pl-6 pr-14 py-4 focus:outline-none focus:border-pink-500 shadow-lg placeholder-gray-500" placeholder="Type message..." onkeypress="if(event.key === 'Enter') sendMessage()">
                     <button onclick="sendMessage()" class="absolute right-2 top-2 bottom-2 bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center hover:scale-105 shadow-md"><i class="fas fa-paper-plane text-sm"></i></button>
                 </div>
             </div>
         </main>
         
-        <div id="planner-widget" class="hidden absolute bottom-40 left-4 z-50 w-[360px] h-[550px] glass-panel rounded-[30px] shadow-2xl overflow-hidden flex flex-col transition-all duration-300 origin-bottom-left">
+        <div id="planner-widget" class="hidden absolute bottom-20 left-4 z-50 w-[90%] md:w-[360px] h-[60vh] glass-panel rounded-[30px] shadow-2xl overflow-hidden flex flex-col transition-all duration-300 origin-bottom-left">
             <div id="planner-overlay-lock" class="absolute inset-0 z-30 bg-gray-900/95 backdrop-blur-md flex flex-col items-center justify-center text-center p-6">
                 <i class="fas fa-lock text-pink-500 text-2xl mb-4"></i>
                 <h3 class="text-white font-bold text-lg">Schedule Locked</h3>
@@ -267,10 +266,8 @@
         const sidebarMusicIconSlash = document.getElementById('sidebar-music-icon-slash');
         const mobileMusicIconSlash = document.getElementById('mobile-music-icon-slash');
         
-        // Set initial volume (30%)
         audioPlayer.volume = 0.3; 
         
-        // Auto-play with Interaction Handling
         window.startComfortMusic = () => {
             audioPlayer.play().then(() => {
                 updateMusicIcons(false); 
@@ -283,11 +280,9 @@
 
         function updateMusicIcons(isMuted) {
             if (isMuted) {
-                // Show the slash if muted
                 if (sidebarMusicIconSlash) sidebarMusicIconSlash.classList.remove('hidden');
                 if (mobileMusicIconSlash) mobileMusicIconSlash.classList.remove('hidden');
             } else {
-                // Hide the slash if playing
                 if (sidebarMusicIconSlash) sidebarMusicIconSlash.classList.add('hidden');
                 if (mobileMusicIconSlash) mobileMusicIconSlash.classList.add('hidden');
             }
@@ -316,6 +311,10 @@
         async function sendMessage() {
             const text = userInput.value.trim();
             if (!text) return;
+            
+            // Mobile keyboard fix: scroll to bottom after sending
+            setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);
+
             addBubble(text, 'user');
             userInput.value = '';
             const loadingId = addLoadingBubble();
@@ -339,11 +338,8 @@
             }
         }
 
-        // 🌟 UPGRADED ADD BUBBLE FUNCTION (WITH CLEANUP + STICKERS)
         function addBubble(text, sender) {
-            // 1. CLEANUP: Remove invisible spaces/newlines from the start & end
             text = text ? text.trim() : "";
-
             const div = document.createElement('div');
             div.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'} chat-bubble`;
             
@@ -352,29 +348,32 @@
                 : 'bg-gray-800 text-gray-200 rounded-bl-none border border-gray-700 bot-text-area';
             
             let mediaHTML = '';
+            let imgUrl = null;
 
-            // CHECK FOR STICKERS: ![alt](url)
-            const imgRegex = /!\[.*?\]\((.*?)\)/;
-            const match = text.match(imgRegex);
+            const markdownMatch = text.match(/!\[.*?\]\((.*?)\)/);
+            const rawLinkMatch = text.match(/(https?:\/\/.*\.(?:gif|png|jpg|jpeg|webp))/i);
 
-            if (match) {
-                const imgUrl = match[1]; 
+            if (markdownMatch) {
+                imgUrl = markdownMatch[1];
+                text = text.replace(markdownMatch[0], '').trim();
+            } else if (rawLinkMatch) {
+                imgUrl = rawLinkMatch[1];
+                text = text.replace(rawLinkMatch[0], '').trim();
+            }
+
+            if (imgUrl) {
                 mediaHTML = `
                     <div class="mt-3 mb-1">
                         <img src="${imgUrl}" class="rounded-xl max-h-40 w-auto border-2 border-pink-500/50 shadow-lg hover:scale-105 transition-transform duration-300 block">
                     </div>
                 `;
-                // Remove the sticker code from the text
-                text = text.replace(match[0], '').trim(); 
             }
 
-            // FORMAT TEXT (Markdown to HTML)
             if (sender === 'bot') {
                 text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                 text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
             }
 
-            // RENDER (Using flex-col to stack text above image)
             let contentHTML = `
                 <div class="${bubbleStyle} rounded-2xl py-3 px-5 max-w-[85%] shadow-md text-sm leading-relaxed flex flex-col">
                     <span>${text}</span>
