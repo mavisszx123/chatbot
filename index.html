@@ -38,7 +38,7 @@
         window.confirmLogout = () => {
             signOut(auth).then(() => { 
                 // 1. Stop Music
-                if(window.pauseComfortMusic) window.pauseComfortMusic(); // Updated music call
+                if(window.pauseComfortMusic) window.pauseComfortMusic(); 
                 
                 // 2. Clear Chat History
                 const chatContainer = document.getElementById('chat-messages');
@@ -256,7 +256,7 @@
                     
                     <div class="flex-1 flex flex-col gap-1">
                         <p class="text-xs font-bold text-gray-200 truncate">Ambient Lo-Fi Loop</p>
-                        <p class="text-[10px] text-gray-400">Status: Playing</p>
+                        <p class="text-[10px] text-gray-400" id="music-status-text">Status: Paused</p>
                     </div>
                     
                     <button onclick="toggleMute()" class="ml-4 text-gray-400 hover:text-white">
@@ -296,7 +296,7 @@
     </div>
     
     <audio id="comfort-audio-player" loop preload="auto">
-        <source src="YOUR_COMFORT_MUSIC_MP3_URL_HERE" type="audio/mpeg">
+        <source src="YOUR_PUBLIC_M4A_URL_HERE" type="audio/mpeg">
         Your browser does not support the audio element.
     </audio>
 
@@ -312,30 +312,30 @@
         const audioPlayer = document.getElementById('comfort-audio-player');
         const playIcon = document.getElementById('play-icon');
         const muteIcon = document.getElementById('mute-icon');
-        const musicStatus = document.querySelector('#music-grid-content p:nth-child(2)');
+        const musicStatus = document.getElementById('music-status-text');
 
 
         // Set initial volume to a safe level (30%)
         audioPlayer.volume = 0.3; 
 
         window.playComfortMusic = () => {
-            audioPlayer.play().catch(error => {
-                // If autoplay is blocked, it defaults to a paused state, UI needs to reflect this
+            // Attempt to play. This catches the browser's autoplay block.
+            audioPlayer.play().then(() => {
+                isPlaying = true;
+                playIcon.className = "fas fa-pause text-xl";
+                musicStatus.innerText = "Status: Playing";
+            }).catch(error => {
                 console.warn("Autoplay was prevented. User must interact first.");
                 isPlaying = false;
-                playIcon.className = "fas fa-play text-sm ml-1";
+                playIcon.className = "fas fa-play text-xl ml-1"; // Show the Play icon since it's currently paused
+                musicStatus.innerText = "Status: Paused";
             });
-            isPlaying = true;
-            playIcon.className = "fas fa-pause text-xl";
-            // Update widget status text
-            musicStatus.innerText = "Status: Playing";
         };
 
         window.pauseComfortMusic = () => {
             audioPlayer.pause();
             isPlaying = false;
             playIcon.className = "fas fa-play text-xl ml-1";
-            // Update widget status text
             musicStatus.innerText = "Status: Paused";
         };
         
@@ -355,7 +355,6 @@
                 musicStatus.innerText = "Status: Muted";
             } else {
                 muteIcon.className = "fas fa-volume-up text-lg";
-                // If music was playing before mute, reset status to playing
                 if (isPlaying) musicStatus.innerText = "Status: Playing";
             }
         };
