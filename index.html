@@ -196,7 +196,7 @@
         <aside class="hidden md:flex flex-col w-64 bg-gray-900 border-r border-gray-800 p-4 z-10 relative">
             <div class="flex items-center gap-3 mb-8 px-2">
                 <div class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center text-xl border border-gray-700 text-pink-400">🌸</div>
-                <div><h2 class="font-bold text-white tracking-wide">Hikari/h2><p class="text-xs text-green-500 flex items-center gap-1">Online</p></div>
+                <div><h2 class="font-bold text-white tracking-wide">Hikari</h2><p class="text-xs text-green-500 flex items-center gap-1">Online</p></div>
             </div>
             <nav class="flex-1 space-y-2">
                 <a href="#" class="flex items-center gap-3 px-4 py-3 bg-gray-800 text-white rounded-xl shadow-sm border border-gray-700 font-medium"><i class="fas fa-comment-alt text-blue-400"></i> Chat</a>
@@ -225,7 +225,7 @@
             </div>
 
             <div id="chat-messages" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scroll-smooth pb-32">
-                <div class="flex justify-start"><div class="bg-gray-800 text-gray-200 rounded-2xl rounded-bl-none py-3 px-5 max-w-[85%] md:max-w-[70%] shadow-md border border-gray-700">Hey! I'm Pandora. 🌸<br>I'm here to listen. How are you feeling?</div></div>
+                <div class="flex justify-start"><div class="bg-gray-800 text-gray-200 rounded-2xl rounded-bl-none py-3 px-5 max-w-[85%] md:max-w-[70%] shadow-md border border-gray-700">Hey! I'm Hikari. 🌸<br>I'm here to listen. How are you feeling?</div></div>
             </div>
 
             <div class="p-4 bg-gray-900 border-t border-gray-800">
@@ -313,7 +313,7 @@
         window.currentUserUID = 'guest';
         let scheduleData = {};
 
-        // --- CHAT (With Context Injection) ---
+        // --- CHAT (Original Text Response Logic) ---
         const chatContainer = document.getElementById('chat-messages');
         const userInput = document.getElementById('user-input');
 
@@ -329,23 +329,34 @@
             const payloadWithContext = `User Question: "${text}" \n [SYSTEM_DATA_CONTEXT] Current Schedule: ${currentSchedule}. If schedule is empty, tell user to use Planner.`;
 
             try {
+                // Expecting plain text string output from n8n for 'data.output'
                 const response = await fetch(N8N_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatInput: payloadWithContext }) });
                 const data = await response.json();
                 document.getElementById(loadingId)?.remove();
+                
                 let reply = data.output || "I'm thinking...";
-                if(reply.includes('[SYSTEM_DATA_CONTEXT]')) reply = reply.split('User Question:')[0]; // Safety cleanup
-                addBubble(reply, 'bot');
+                // Safety cleanup
+                if(reply.includes('[SYSTEM_DATA_CONTEXT]')) reply = reply.split('User Question:')[0]; 
+                
+                // Original call: no sticker parameter
+                addBubble(reply, 'bot'); 
+
             } catch (error) {
                 document.getElementById(loadingId)?.remove();
-                addBubble("Connection Error.", 'bot');
+                console.error("Chat Error:", error); 
+                addBubble("Connection Error or Invalid Response.", 'bot');
             }
         }
 
+        // Original Function addBubble (No sticker parameter)
         function addBubble(text, sender) {
             const div = document.createElement('div');
             div.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'} chat-bubble`;
             const bubbleStyle = sender === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none border border-gray-700';
-            div.innerHTML = `<div class="${bubbleStyle} rounded-2xl py-3 px-5 max-w-[85%] shadow-md text-sm">${text}</div>`;
+            
+            let contentHTML = `<div class="${bubbleStyle} rounded-2xl py-3 px-5 max-w-[85%] shadow-md text-sm">${text}</div>`;
+            
+            div.innerHTML = contentHTML;
             chatContainer.appendChild(div);
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
@@ -356,6 +367,7 @@
             div.className = 'flex justify-start chat-bubble';
             div.innerHTML = `<div class="bg-gray-800 rounded-2xl rounded-bl-none py-4 px-5 shadow-md border border-gray-700 flex gap-1"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
             chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
             return div.id;
         }
 
@@ -490,7 +502,8 @@
         const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
         window.loadUserSchedule = () => {
-            const key = `pandora_timetable_${window.currentUserUID}`;
+            // FIX: Changed storage key to 'hikari'
+            const key = `hikari_timetable_${window.currentUserUID}`;
             scheduleData = JSON.parse(localStorage.getItem(key)) || {};
             if (!document.getElementById('planner-widget').classList.contains('hidden')) renderTimetable();
         };
@@ -540,7 +553,8 @@
             const venue = document.getElementById('course-venue').value;
             if(course) {
                 scheduleData[id] = { course, lecturer, venue };
-                localStorage.setItem(`pandora_timetable_${window.currentUserUID}`, JSON.stringify(scheduleData));
+                // FIX: Changed storage key to 'hikari'
+                localStorage.setItem(`hikari_timetable_${window.currentUserUID}`, JSON.stringify(scheduleData));
                 renderTimetable();
                 closeTimetableModal();
             }
@@ -549,7 +563,8 @@
         window.deleteTimetableSlot = () => {
             const id = document.getElementById('slot-id').value;
             delete scheduleData[id];
-            localStorage.setItem(`pandora_timetable_${window.currentUserUID}`, JSON.stringify(scheduleData));
+            // FIX: Changed storage key to 'hikari'
+            localStorage.setItem(`hikari_timetable_${window.currentUserUID}`, JSON.stringify(scheduleData));
             renderTimetable();
             closeTimetableModal();
         }
@@ -571,7 +586,8 @@
                 newSlots.forEach(slot => {
                     if (!scheduleData[slot.id]) { scheduleData[slot.id] = { course: slot.course, lecturer: slot.lecturer, venue: slot.venue }; }
                 });
-                localStorage.setItem(`pandora_timetable_${window.currentUserUID}`, JSON.stringify(scheduleData));
+                // FIX: Changed storage key to 'hikari'
+                localStorage.setItem(`hikari_timetable_${window.currentUserUID}`, JSON.stringify(scheduleData));
                 renderTimetable();
                 alert("✨ Schedule optimized for mental wellness!");
             } catch (error) {
